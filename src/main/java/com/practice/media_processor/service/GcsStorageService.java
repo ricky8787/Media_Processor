@@ -4,6 +4,9 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+
+import java.net.URL;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -34,7 +37,9 @@ public class GcsStorageService implements StorageService {
 
     @Override
     public String getFileUrl(String filePath) {
-        // GCS 的公開讀取網址格式
-        return "https://storage.googleapis.com/" + bucketName + "/" + filePath;
+        // 產生一個 10 分鐘後自動銷毀失效的加密限時網址 (Signed URL)
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, filePath)).build();
+        URL url = storage.signUrl(blobInfo, 10, TimeUnit.MINUTES, Storage.SignUrlOption.withV4Signature());
+        return url.toString();
     }
 }
