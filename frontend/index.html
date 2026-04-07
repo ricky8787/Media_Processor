@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Vue 3 (CDN) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 處理 WebSocket 的 STOMP 客戶端 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.3) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.3) 0, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.6);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-area:hover, .upload-area.dragging {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .upload-area svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            transition: stroke 0.3s ease;
+        }
+
+        .upload-area:hover svg {
+            stroke: var(--primary);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 9999px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.7;
+            box-shadow: none;
+        }
+
+        /* 檔案資訊區 */
+        .file-info {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 讀取動畫 */
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-box {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .status-box.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .status-box.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-image {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: fadeIn 0.5s ease-out forwards;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app" class="container">
+        <div class="glass-card">
+            <h1>Image Worker</h1>
+            <p class="subtitle">Distributed Media Processing using Redis & RabbitMQ</p>
+            
+            <div 
+                v-if="!selectedFile && !isProcessing" 
+                class="upload-area" 
+                @dragover.prevent="isDragging = true" 
+                @dragleave.prevent="isDragging = false" 
+                @drop.prevent="handleDrop"
+                :class="{ 'dragging': isDragging }"
+                @click="$refs.fileInput.click()"
+            >
+                <input type="file" ref="fileInput" @change="handleFileSelect" style="display: none" accept="image/*">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3>Drag & Drop your image here</h3>
+                <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;">or click to browse from device</p>
+            </div>
+
+            <div v-if="selectedFile && !isProcessing && !finalImageUrl" class="file-info">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">{{ selectedFile.name }} ({{ formatSize(selectedFile.size) }})</span>
+                <span style="color: var(--danger); cursor: pointer;" @click="clearFile">✖</span>
+            </div>
+
+            <button v-if="!isProcessing && !finalImageUrl" class="btn" :disabled="!selectedFile" @click="uploadImage">
+                Start Processing
+            </button>
+
+            <!-- 載入狀態 -->
+            <div v-if="isProcessing" class="status-box">
+                <div class="spinner"></div>
+                <h3 style="display: inline-block;">processing...</h3>
+                <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;">Connected via WebSocket. Waiting for RabbitMQ worker.</p>
+            </div>
+
+            <!-- 完成狀態 -->
+            <div v-if="finalImageUrl" class="status-box success">
+                <h3 style="color: var(--success); margin-bottom: 0.5rem;">Processing Completed!</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Processed via Worker Node</p>
+                <img :src="finalImageUrl" class="result-image" alt="Processed Image">
+                <button class="btn" style="margin-top: 1.5rem; background: rgba(255,255,255,0.1);" @click="resetAll">
+                    Process Another
+                </button>
+            </div>
+
+            <!-- 錯誤狀態 -->
+            <div v-if="errorMsg" class="status-box error">
+                <h3 style="color: var(--danger); margin-bottom: 0.5rem;">Pipeline Error</h3>
+                <p>{{ errorMsg }}</p>
+                <button class="btn" style="margin-top: 1.5rem; background: rgba(255,255,255,0.1);" @click="resetAll">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    isDragging: false,
+                    selectedFile: null,
+                    isProcessing: false,
+                    taskId: null,
+                    finalImageUrl: null,
+                    errorMsg: null,
+                    stompClient: null
+                }
+            },
+            methods: {
+                handleDrop(e) {
+                    this.isDragging = false;
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        this.selectedFile = e.dataTransfer.files[0];
+                    }
+                },
+                handleFileSelect(e) {
+                    if (e.target.files && e.target.files.length > 0) {
+                        this.selectedFile = e.target.files[0];
+                    }
+                },
+                clearFile() {
+                    this.selectedFile = null;
+                    if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+                },
+                formatSize(bytes) {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const sizes = ['Bytes', 'KB', 'MB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+                resetAll() {
+                    this.selectedFile = null;
+                    this.isProcessing = false;
+                    this.taskId = null;
+                    this.finalImageUrl = null;
+                    this.errorMsg = null;
+                    if (this.stompClient) {
+                        this.stompClient.disconnect();
+                        this.stompClient = null;
+                    }
+                },
+                
+                // 上傳邏輯
+                async uploadImage() {
+                    if (!this.selectedFile) return;
+                    
+                    this.isProcessing = true;
+                    this.errorMsg = null;
+
+                    const formData = new FormData();
+                    formData.append('file', this.selectedFile);
+
+                    try {
+                        const response = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Upload failed with status ' + response.status);
+                        }
+
+                        const textRecord = await response.text(); 
+                        // 解析 ID (在 ImageController 中我們回傳 "任務已送出，ID: xxx")
+                        // 這裡偷吃步用正則表達式把 UUID 取出來
+                        const match = textRecord.match(/[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}/);
+                        if (match) {
+                            this.taskId = match[0];
+                            this.connectWebSocket();
+                        } else {
+                            throw new Error("Cannot parse Task ID from response");
+                        }
+
+                    } catch (error) {
+                        console.error(error);
+                        this.isProcessing = false;
+                        this.errorMsg = error.message;
+                    }
+                },
+
+                // WebSocket (STOMP) 連線與訂閱
+                connectWebSocket() {
+                    // 透過 Nginx 反向代理存取 WebSocket，路徑是主域名的 /ws
+                    // 因為 Nginx 轉發，要使用相對路徑協議才不會跨網域出錯
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws/`;
+                    
+                    // 注意：因為有 withSockJS() 的備用選項，我們這裡直接用純 WebSocket 即可。
+                    // 由於 Nginx 設定了 upgrade，STOMP 直接吃 ws:// 就可以了。
+                    // 但如果你真的報 404，那可能需要引入 SockJS。為簡單我們這邊不混用。
+                    // 為確保相容性，通常 Spring withSockJS 端點需要用 SockJS 連線，但我們剛才能轉發是因為 Upgrade。
+                    
+                    // 用原生的 WebSocket 建立 STOMP (如果 Spring config 沒有強制 fallback)
+                    // 如果這段報錯，需要換成 const socket = new SockJS('/ws'); this.stompClient = Stomp.over(socket);
+                    // 為了最穩，我們改用相對路徑去敲
+                    
+                    // 因為之前 Java 裡面 WebSocketConfig 寫了 withSockJS()，
+                    // WebSocket 連線路徑通常要加 /websocket 結尾才是純 ws。若不行就在後端拔掉 withSockJS。
+                    // 這裡先嘗試直接連 /ws/websocket
+                    const socketUrl = `${protocol}//${window.location.host}/ws/websocket`;
+                    
+                    let ws = new WebSocket(socketUrl);
+                    this.stompClient = Stomp.over(ws);
+                    
+                    // 隱藏 STOMP 除錯日誌
+                    this.stompClient.debug = null; 
+
+                    this.stompClient.connect({}, (frame) => {
+                        console.log('Connected to WebSocket Pipeline!');
+                        
+                        // 訂閱 ImageWorker 推播的頻道
+                        this.stompClient.subscribe('/topic/tasks/' + this.taskId, (message) => {
+                            const body = message.body;
+                            console.log("Received via WebSocket:", body);
+
+                            if (body.startsWith('COMPLETED')) {
+                                // 提取 URL (例如 COMPLETED:http://localhost/outputs/xxxx.png)
+                                const url = body.split('COMPLETED:')[1];
+                                this.isProcessing = false;
+                                this.finalImageUrl = url;
+                                this.stompClient.disconnect(); // 任務結束，手動斷開
+                            } else if (body === 'FAILED') {
+                                this.isProcessing = false;
+                                this.errorMsg = "Background worker failed to process the image.";
+                                this.stompClient.disconnect();
+                            }
+                        });
+                    }, (error) => {
+                        console.error('WebSocket Error:', error);
+                        // 如果 WebSocket 斷了，用文字提醒
+                        this.errorMsg = "WebSocket disconnected. Cannot receive real-time updates.";
+                        this.isProcessing = false;
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
