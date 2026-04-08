@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/test")
+@RequestMapping("/api/test")
 @RequiredArgsConstructor
 public class TestDeployedController {
 
-    @GetMapping("/checkIfDeployed")
+    @GetMapping("/check")
     public ResponseEntity<Map<String, Object>> getResult() {
         Map<String, Object> status = new HashMap<>();
         status.put("message", "App is running");
