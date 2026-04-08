@@ -19,6 +19,13 @@ public class StorageConfig {
     @Value("${storage.type:local}") // 預設為 local
     private String storageType;
 
+    public StorageConfig() {
+        // 這行如果不印，代表 Spring 根本沒掃描到這個檔案
+        log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        log.info("!!!! STORAGE CONFIG CLASS IS LOADED !!!!");
+        log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    }
+
     @Bean
     public StorageService storageService() {
         log.info("==== 正在初始化儲存服務，選擇類型: {} ====", storageType);
