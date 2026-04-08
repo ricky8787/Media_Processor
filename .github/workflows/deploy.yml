@@ -45,7 +45,8 @@ jobs:
       # 4. 建立 Image 並推送到倉庫
       - name: Build and Push Image
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest .
+          # 加上 --no-cache 避免抓到舊的編譯層
+          docker build --no-cache -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 
   # 第二階段：連進 GCP VM 更新服務
