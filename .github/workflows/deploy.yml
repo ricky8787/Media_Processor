@@ -67,6 +67,10 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
+            # 1. 暴力清空：確保沒有任何舊容器（包含手動跑的）殘留
+            docker stop $(docker ps -q) 2>/dev/null || true
+            docker rm $(docker ps -a -q) 2>/dev/null || true
+
             cd ~/Media_Processor
             
             # 1. 更新 .env 檔案 (這是給 Compose 讀取 IMAGE_TAG 的)
@@ -83,11 +87,6 @@ jobs:
 
             # 5. 執行 Compose Down & Up
             # 這裡增加 --env-file .env 確保變數 100% 被載入
-            docker run --rm \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -v "$PWD:$PWD" -w "$PWD" \
-              docker/compose:1.29.2 --env-file .env down
-
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:$PWD" -w "$PWD" \
