@@ -69,28 +69,29 @@ jobs:
           script: |
             cd ~/Media_Processor
             
-            # 1. 確保 VM 有權限拉取（在 COS 上這步很重要）
-            # 如果 VM 已經有 Full API Access，這行通常很快
-            gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
-            
-            # 2. 拉取最新映像檔
-            IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-            docker pull $IMAGE
-
-            # 設定 tag 給 compose 用
+            # 1. 更新 .env 檔案 (這是給 Compose 讀取 IMAGE_TAG 的)
             echo "IMAGE_TAG=${{ github.sha }}" > .env
             
-            # 3. 重新啟動容器 (使用你習慣的 COS 跑法)
+            # 2. 登入 (如果 VM 本身有 Service Account 權限，這步失敗也沒關係)
+            gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet || true
+            
+            # 3. 指定映像檔全名
+            IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+            # 4. 強制拉取 (確保新版 Image 在本機)
+            docker pull $IMAGE
+
+            # 5. 執行 Compose Down & Up
+            # 這裡增加 --env-file .env 確保變數 100% 被載入
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:$PWD" -w "$PWD" \
-              docker/compose:1.29.2 down
+              docker/compose:1.29.2 --env-file .env down
 
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:$PWD" -w "$PWD" \
-              docker/compose:1.29.2 up -d
-            
-            # 4. 清理舊的不用的 Image，節省 20GB 的硬碟空間
+              docker/compose:1.29.2 --env-file .env up -d
+
+            # 6. 清理
             docker image prune -f
