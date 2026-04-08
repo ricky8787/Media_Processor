@@ -20,19 +20,15 @@ public class StorageConfig {
     private String storageType;
 
     @Bean
-    public Storage gcsClient() {
-        log.info("storageType: {}", storageType);
-        if ("gcs".equalsIgnoreCase(storageType)) {
-            return StorageOptions.getDefaultInstance().getService();
-        }
-        return null;
-    }
-
-    @Bean
-    public StorageService storageService(Storage gcsClient) {
+    public StorageService storageService() {
         log.info("==== 正在初始化儲存服務，選擇類型: {} ====", storageType);
 
         if ("gcs".equalsIgnoreCase(storageType)) {
+            log.info("偵測到 GCS 模式，正在初始化 Google Cloud SDK...");
+
+            // 直接在這裡建立 Storage 客戶端
+            Storage gcsClient = StorageOptions.getDefaultInstance().getService();
+
             log.info("成功建立 GcsStorageService Bean");
             return new GcsStorageService(gcsClient);
         } else {
