@@ -1,0 +1,10 @@
+<configuration>
+    <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
+        <log>spring.log</log> 
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CLOUD" />
+        <appender-ref ref="STDOUT" /> 
+    </root>
+</configuration>

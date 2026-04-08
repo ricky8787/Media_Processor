@@ -21,8 +21,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // 啟用一個簡單的訊息代理 (Broker)。發送到 /topic 開頭的訊息會被廣播給訂閱的客戶端
         registry.enableSimpleBroker("/topic");
-        
-        // 客戶端如果要發訊息給伺服器，路徑必須加上 /app 前綴 (不過我們現在只需要單向推播，這行是防呆)
+
+        // 客戶端如果要發訊息給伺服器，路徑必須加上 /app 前綴
         registry.setApplicationDestinationPrefixes("/app");
     }
 }

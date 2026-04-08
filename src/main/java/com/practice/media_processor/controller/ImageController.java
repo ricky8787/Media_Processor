@@ -33,4 +33,13 @@ public class ImageController {
         }
         return ResponseEntity.ok(status);
     }
+
+    @GetMapping("/result/{taskId}")
+    public ResponseEntity<String> getResult(@PathVariable String taskId) {
+        String status = imageService.getTaskStatus(taskId);
+        if (status == null) {
+            return ResponseEntity.status(404).body("Task not found");
+        }
+        return ResponseEntity.ok(status);
+    }
 }

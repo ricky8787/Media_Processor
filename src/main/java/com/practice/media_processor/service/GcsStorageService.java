@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @Profile("prod") // 只有在生產環境 (-Dspring.profiles.active=prod) 才啟動
 public class GcsStorageService implements StorageService {
@@ -37,9 +40,32 @@ public class GcsStorageService implements StorageService {
 
     @Override
     public String getFileUrl(String filePath) {
-        // 產生一個 10 分鐘後自動銷毀失效的加密限時網址 (Signed URL)
-        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, filePath)).build();
-        URL url = storage.signUrl(blobInfo, 10, TimeUnit.MINUTES, Storage.SignUrlOption.withV4Signature());
-        return url.toString();
+        try {
+            log.info("嘗試為路徑簽署網址: {}", filePath);
+
+            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, filePath)).build();
+
+            // 生成 V4 簽署網址
+            URL url = storage.signUrl(
+                    blobInfo,
+                    10,
+                    TimeUnit.MINUTES,
+                    Storage.SignUrlOption.withV4Signature());
+
+            if (url == null) {
+                log.error("Storage signUrl 回傳為 null！");
+                return "https://storage.googleapis.com/" + bucketName + "/" + filePath;
+            }
+
+            String signedUrl = url.toString();
+            log.info("簽署成功！網址長度: {}", signedUrl.length());
+            return signedUrl;
+
+        } catch (Exception e) {
+            // 這是最關鍵的一行，如果權限不足，這裡會印出原因
+            log.error("!!! 簽署網址發生異常 !!! 錯誤訊息: {}", e.getMessage(), e);
+            // 暫時回傳短網址（這是導致 Access Denied 的原因）
+            return "https://storage.googleapis.com/" + bucketName + "/" + filePath;
+        }
     }
 }
