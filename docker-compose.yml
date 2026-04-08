@@ -4,7 +4,7 @@ services:
   main-app:
   # 1. 這裡的路徑必須跟 deploy.yml 中的倉庫路徑完全一致！
     # 格式: [區域]-docker.pkg.dev/[專案ID]/[倉庫名]/[映像檔名]:latest
-    image: asia-east1-docker.pkg.dev/media-processor-492605/media-processor-repo/main-app:latest
+    image: asia-east1-docker.pkg.dev/media-processor-492605/media-processor-repo/main-app:${{ github.sha }}
     # build: .
     container_name: media_processor_app
     ports:

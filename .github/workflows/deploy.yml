@@ -45,9 +45,10 @@ jobs:
       # 4. 建立 Image 並推送到倉庫
       - name: Build and Push Image
         run: |
-          # 加上 --no-cache 避免抓到舊的編譯層
-          docker build --no-cache -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest .
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+          docker build -t $IMAGE .
+          docker push $IMAGE
 
   # 第二階段：連進 GCP VM 更新服務
   deploy:
@@ -68,9 +69,19 @@ jobs:
             gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
             
             # 2. 拉取最新映像檔
-            docker pull asia-east1-docker.pkg.dev/media-processor-492605/media-processor-repo/main-app:latest
+            IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+            docker pull $IMAGE
+
+            # 設定 tag 給 compose 用
+            echo "IMAGE_TAG=${{ github.sha }}" > .env
             
             # 3. 重新啟動容器 (使用你習慣的 COS 跑法)
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD:$PWD" -w "$PWD" \
+              docker/compose:1.29.2 down
+
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:$PWD" -w "$PWD" \
