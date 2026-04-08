@@ -13,7 +13,7 @@ services:
     environment:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_RABBITMQ_HOST=rabbitmq
-      # 將 Profile 改為 prod，強制啟用 GcsStorageService
+      - STORAGE_TYPE=gcs
       - SPRING_PROFILES_ACTIVE=prod
       # GCP建立的 Bucket 名稱
       - GCP_BUCKET_NAME=scott-media-processor-bucket
