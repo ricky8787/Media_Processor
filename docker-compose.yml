@@ -7,6 +7,8 @@ services:
     image: asia-east1-docker.pkg.dev/media-processor-492605/media-processor-repo/main-app:latest
     # build: .
     container_name: media_processor_app
+    ports:
+      - "8080:8080"
     restart: always
     environment:
       - SPRING_DATA_REDIS_HOST=redis
@@ -59,6 +61,7 @@ services:
       - ./frontend:/usr/share/nginx/html
       - ./media_data:/usr/share/nginx/html/outputs:ro 
     depends_on:
+      - main-app
       - rabbitmq
     networks:
       - media_processor_network

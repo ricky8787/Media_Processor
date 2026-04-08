@@ -62,11 +62,12 @@ jobs:
           script: |
             cd ~/Media_Processor
             
-            # 1. 登入 Google Docker 倉庫 (VM 端)
-            # 注意：若 VM 權限不足，可能需要手動執行一次 gcloud auth configure-docker
+            # 1. 確保 VM 有權限拉取（在 COS 上這步很重要）
+            # 如果 VM 已經有 Full API Access，這行通常很快
+            gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
             
             # 2. 拉取最新映像檔
-            docker pull ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
+            docker pull asia-east1-docker.pkg.dev/media-processor-492605/media-processor-repo/main-app:latest
             
             # 3. 重新啟動容器 (使用你習慣的 COS 跑法)
             docker run --rm \
