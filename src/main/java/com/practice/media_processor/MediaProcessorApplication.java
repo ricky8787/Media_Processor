@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MediaProcessorApplication {
 
 	public static void main(String[] args) {
+		System.out.println("BUILD_VERSION (before start) = " + System.getenv("BUILD_VERSION"));
 		SpringApplication.run(MediaProcessorApplication.class, args);
 	}
 

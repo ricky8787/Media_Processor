@@ -47,8 +47,13 @@ jobs:
         run: |
           IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-          docker build -t $IMAGE .
+          docker build --build-arg BUILD_VERSION=${{ github.sha }} -t $IMAGE .
           docker push $IMAGE
+      # 加上 debug log
+      - name: Debug commit
+        run: |
+          echo "SHA=${{ github.sha }}"
+          git log -1
 
   # 第二階段：連進 GCP VM 更新服務
   deploy:
