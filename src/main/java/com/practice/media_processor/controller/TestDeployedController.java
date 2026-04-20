@@ -19,7 +19,7 @@ public class TestDeployedController {
     @GetMapping("/check")
     public ResponseEntity<Map<String, Object>> getResult() {
         Map<String, Object> status = new HashMap<>();
-        status.put("message", "App is running");
+        status.put("message", "App is running v2");
         status.put("status", "success");
         status.put("timestamp", new Date());
         return ResponseEntity.ok(status);

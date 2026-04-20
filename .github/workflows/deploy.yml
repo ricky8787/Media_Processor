@@ -70,10 +70,6 @@ jobs:
             cd ~/Media_Processor
             git pull origin main
 
-            # 暴力清空：確保沒有任何舊容器（包含手動跑的）殘留
-            docker stop $(docker ps -q) 2>/dev/null || true
-            docker rm $(docker ps -a -q) 2>/dev/null || true
-
             # 更新 .env 檔案 (這是給 Compose 讀取 IMAGE_TAG 的)
             echo "IMAGE_TAG=${{ github.sha }}" > .env
             
